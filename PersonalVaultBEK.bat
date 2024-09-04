@@ -4,6 +4,18 @@ set temp_script=%temp%\diskpart_script.txt
 set foundMatch=0
 set volMatch=0
 
+:START
+set /P "BEKpath=Enter path to save external key to: "
+IF "%BEKpath%" == "" GOTO START
+
+REM Check if the last character is a backslash and remove it
+if "%BEKpath:~-1%"=="\" set "BEKpath=%BEKpath:~0,-1%"
+
+IF NOT EXIST "%BEKpath%" (
+	MKDIR "%BEKpath%"
+)
+
+:GETKEY
 FOR /F "tokens=* skip=9" %%a IN ('echo list vdisk ^| diskpart') do (
     echo %%a:~0, -1%% | findstr /C:"OneDriveTemp" >nul
     if !errorlevel!==0 (
@@ -32,9 +44,11 @@ FOR /F "tokens=* skip=9" %%a IN ('echo list vdisk ^| diskpart') do (
                             echo.
 							echo Personal Vault drive letter: %%d
                             echo.
-							echo Saving External Key File to %1
+							echo Saving External Key File to %BEKpath%
 							echo.
-                            manage-bde -protectors -get %%d: -sek %1 > nul
+                            manage-bde -protectors -get %%d: -sek "%BEKpath%" > nul
+							timeout 5 > nul
+							attrib -s -h "%BEKpath%"\*.BEK
                             
                             set /P "disable=Would you like to disable BitLocker on %%d (Y/[N])?"
                             IF /I "!disable!" NEQ "Y" GOTO END
@@ -54,7 +68,7 @@ REM Check if any matches were found
 if !foundMatch!==0 (
     echo.
 	echo No OneDrive Personal Vaults were found.
-	GOTO END
+	GOTO END:\
 )
 
 if !volMatch!==0 (
